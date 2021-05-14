@@ -1,3 +1,4 @@
+//Keep overview in main function by putting calculation stuff into functions
 
 void calculateGyroOffset(uint8_t nSample);
 void readSensor();

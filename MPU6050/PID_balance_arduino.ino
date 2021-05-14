@@ -1,3 +1,5 @@
+//PID brushless motor control tutorial - Electronoobs - https://youtu.be/AN3yxIBAxTA
+
 #include <Wire.h>
 #include <Servo.h>
 
@@ -231,3 +233,4 @@ right_prop.writeMicroseconds(pwmRight);
 previous_error = error; //Remember to store the previous error.
 
 }//end of loop void
+
