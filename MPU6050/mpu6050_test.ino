@@ -13,6 +13,10 @@ float Total_angle[2];
 float elapsedTime, timeH, timePrev;
 int i;
 float rad_to_deg = 180/3.141592654;
+float deviation;
+
+//functions
+float imu();
 
 
 void setup() {
@@ -24,15 +28,30 @@ void setup() {
   Wire.endTransmission(true);
 
   timeH = millis(); //Start counting time in milliseconds
-  delay(1000);
-}//end of setup void
+
+  //calibrate deviation -> funny enough no Mean-Calculation necessary
+  for(i=0; i<500; i++){
+    imu(); //let it reach optimal operation temperature?
+  }
+  deviation = imu() * (-1);
+}
 
 void loop() {
 
 /////////////////////////////I M U/////////////////////////////////////
+
+  Serial.print(imu() + deviation); Serial.print(" , ");    // y-angle
+  Serial.println(deviation);
+  /*In Arduino IDE open Serial Monitor or Serial Plotter*/
+
+}
+
+
+
+float imu(){
    timePrev = timeH;  // the previous time is stored before the actual time read
    timeH = millis();  // actual time read
-   elapsedTime = (timeH - timePrev) / 1000; 
+   elapsedTime = (timeH - timePrev) / 1000;
   
    Wire.beginTransmission(MPU_ADDR);
    Wire.write(0x3B); //Ask for/start with the 0x3B register- correspond to AcX (ACCEL_XOUT_H)
@@ -66,11 +85,7 @@ void loop() {
    Total_angle[0] = 0.98 *(Total_angle[0] + Gyro_angle[0]*elapsedTime) + 0.02*Acceleration_angle[0];
    /*---Y axis angle---*/
    Total_angle[1] = 0.98 *(Total_angle[1] + Gyro_angle[1]*elapsedTime) + 0.02*Acceleration_angle[1];
-   
-   /*Now we have our angles in degree and values from -10º0 to 100º aprox*/
-   Serial.print(Total_angle[0]); Serial.print(" , ");    // x-angle
-   Serial.println(Total_angle[1]); //Serial.print("\n"); // y-angle
-   /*In Arduino IDE open Serial Monitor or Serial Plotter*/
 
-   
-}//end of loop void
+   /*Now we have our angles in degree and values from -100º to 100º aprox*/
+   return Total_angle[1];
+}

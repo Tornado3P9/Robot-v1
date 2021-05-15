@@ -143,7 +143,7 @@ void loop() {
    /*---Y axis angle---*/
    Total_angle[1] = 0.98 *(Total_angle[1] + Gyro_angle[1]*elapsedTime) + 0.02*Acceleration_angle[1];
    
-   /*Now we have our angles in degree and values from -10º0 to 100º aprox*/
+   /*Now we have our angles in degree and values from -100º to 100º aprox*/
     //Serial.println(Total_angle[1]);
 
    
