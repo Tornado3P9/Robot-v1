@@ -17,6 +17,8 @@ float deviation;
 
 //functions
 float imu();
+// Define LED pin
+const int LED_SETUP = 5;
 
 
 void setup() {
@@ -27,6 +29,11 @@ void setup() {
   Wire.write(0);    // set to zero (wakes up the MPU−6050)
   Wire.endTransmission(true);
 
+  // Initialize LED pin as an output
+  pinMode(LED_PIN, OUTPUT);
+  // LED_SETUP = ON
+  digitalWrite(LED_SETUP, HIGH);
+
   timeH = millis(); //Start counting time in milliseconds
 
   //calibrate deviation -> funny enough no Mean-Calculation necessary
@@ -34,6 +41,9 @@ void setup() {
     imu(); //let it reach optimal operation temperature?
   }
   deviation = imu() * (-1);
+
+  // LED_SETUP = OFF
+  digitalWrite(LED_SETUP, LOW);
 }
 
 void loop() {
