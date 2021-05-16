@@ -30,7 +30,7 @@ void setup() {
   Wire.endTransmission(true);
 
   // Initialize LED pin as an output
-  pinMode(LED_PIN, OUTPUT);
+  pinMode(LED_SETUP, OUTPUT);
   // LED_SETUP = ON
   digitalWrite(LED_SETUP, HIGH);
 
