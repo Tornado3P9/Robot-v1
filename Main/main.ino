@@ -42,6 +42,11 @@ const int LED_SETUP = 5;
 
 void setup() {
   Serial.begin(115200);
+  // Initialize LED pin as an output
+  pinMode(LED_SETUP, OUTPUT);
+  // LED_SETUP = ON
+  digitalWrite(LED_SETUP, HIGH);
+  // MPU6050 communication begin
   Wire.begin();
   Wire.beginTransmission(MPU_ADDR);
   Wire.write(0x6B); // PWR_MGMT_1 register
@@ -51,11 +56,6 @@ void setup() {
   // Declare motor pins as Outputs
   pinMode(stepPin, OUTPUT);
   pinMode(dirPin, OUTPUT);
-  // Initialize LED pin as an output
-  pinMode(LED_PIN, OUTPUT);
-
-  // LED_SETUP = ON
-  digitalWrite(LED_SETUP, HIGH);
 
   timeH = millis(); //Start counting time in milliseconds
 
