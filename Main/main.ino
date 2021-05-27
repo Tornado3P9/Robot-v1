@@ -28,7 +28,7 @@ double kp=3.55;//3.55
 double ki=0.005;//0.003
 double kd=2.05;//2.05
 ///////////////////////////////////////////////
-float desired_angle = 0; //This is the angle in which we whant the
+float desired_angle = 0; //This is the angle in which we want the
                          //balance to stay steady
 
 /************* Motor kram *************/
@@ -42,7 +42,10 @@ int motorState = LOW; //Steppermotoren bekommen wechselnd HIGH und LOW voltage
 int motorRDir = HIGH; //motor direction clockwise
 int motorLDir = LOW;  //motor direction counterclockwise
 unsigned long previousMicros = 0;
-long interval = 1000; //interval in microseconds
+long interval = 1000; //interval in microseconds //maybe change to 'short'
+int tempX;
+// Define max-Function
+float max(float a, float b);
 
 // Define LED pin
 const int LED_SETUP = 5;
@@ -91,7 +94,7 @@ void loop() {
 /////////////////////////////P I D/////////////////////////////////////
 
   error = Total_angle[1] - desired_angle;
-
+/*
   pid_p = kp*error;
 
   if(-3 <error <3){
@@ -104,6 +107,17 @@ void loop() {
 
   //Remember to store the previous error.
   previous_error = error;
+*/
+
+  //Or using quadratic fit{{-30,50},{0,1000},{30,50}} = 1000 - 1.05556*x**2
+  interval = max(50.0, 1000 - (1.05556*(error*error)); //der Wert soll nicht in den Minusbereich abdriften
+  if(error < 0){
+    motorRDir = LOW;  //motor direction counterclockwise
+    motorLDir = HIGH; //motor direction clockwise
+  } else {
+    motorRDir = HIGH; //motor direction clockwise
+    motorLDir = LOW;  //motor direction counterclockwise
+  }
 
 /////////////////////////////MOTOR/////////////////////////////////////
   unsigned long currentMicros = micros();  //Bei jedem Durchlauf neu erstellen und damit die Lifetime von 70min umgehen.
@@ -166,4 +180,12 @@ float imu(){
 
    /*Now we have our angles in degree and values from -100º to 100º aprox*/
    return Total_angle[1];
+}
+
+float max(float a, float b){
+  if(a>=b){
+    return a;
+  } else {
+    return b;
+  }
 }
