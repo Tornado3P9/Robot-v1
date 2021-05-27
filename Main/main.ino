@@ -33,9 +33,17 @@ float desired_angle = 0; //This is the angle in which we whant the
 
 /************* Motor kram *************/
 // Define pin connections & motor's steps per revolution
-const int dirPin = 2;
-const int stepPin = 4;
-int SPR = 400; //stepsPerRevolution
+const int dirPinR = 2;
+const int stepPinR = 4;
+const int dirPinL = 15;
+const int stepPinL = 18;
+//int SPR = 400; //stepsPerRevolution
+int motorState = LOW; //Steppermotoren bekommen wechselnd HIGH und LOW voltage
+int motorRDir = HIGH; //motor direction clockwise
+int motorLDir = LOW;  //motor direction counterclockwise
+unsigned long previousMicros = 0;
+long interval = 500000; //interval in microseconds
+
 // Define LED pin
 const int LED_SETUP = 5;
 
@@ -46,6 +54,7 @@ void setup() {
   pinMode(LED_SETUP, OUTPUT);
   // LED_SETUP = ON
   digitalWrite(LED_SETUP, HIGH);
+
   // MPU6050 communication begin
   Wire.begin();
   Wire.beginTransmission(MPU_ADDR);
@@ -54,8 +63,10 @@ void setup() {
   Wire.endTransmission(true);
 
   // Declare motor pins as Outputs
-  pinMode(stepPin, OUTPUT);
-  pinMode(dirPin, OUTPUT);
+  pinMode(stepPinR, OUTPUT);
+  pinMode(dirPinR, OUTPUT);
+  pinMode(stepPinL, OUTPUT);
+  pinMode(dirPinL, OUTPUT);
 
   timeH = millis(); //Start counting time in milliseconds
 
@@ -71,7 +82,7 @@ void setup() {
 
 void loop() {
 
-/////////////////////////////I M U/////////////////////////////////////   Muss wohl per interrupt geschehen? Oder nachher mit FreeRTOS zwei unabhaengige Prozesse
+/////////////////////////////I M U/////////////////////////////////////
 
   Serial.print(imu() + deviation); Serial.print(" , ");    // y-angle
   Serial.println(deviation);
@@ -91,25 +102,29 @@ void loop() {
 
   PID = pid_p + pid_i + pid_d;
 
-  /*Finnaly we calculate the desired throttle
-  Must be inverse to what we have done so far....not finished version!*/
-  pwmLeft = SPR + PID;
-  pwmRight = SPR + PID;
-
   //Remember to store the previous error.
   previous_error = error;
 
 /////////////////////////////MOTOR/////////////////////////////////////
-  // Set motor direction clockwise
-  digitalWrite(dirPin, HIGH);
+  unsigned long currentMicros = micros();  //Bei jedem Durchlauf neu erstellen und damit die Lifetime von 70min umgehen.
+  if (currentMicros - previousMicros >= interval) {
+    previousMicros = currentMicros;
 
-  // Spin motor
-  digitalWrite(stepPin, HIGH);
-  //delayMicroseconds(1000); == delay(1);
-  //delay(1000); // Wait a second
+    // Set motor direction
+    digitalWrite(dirPinR, motorRDir);
+    digitalWrite(dirPinL, motorLDir);
+
+    // Spin motor
+    if (motorState == LOW) {
+        motorState = HIGH;
+    } else {
+        motorState = LOW;
+    }
+    digitalWrite(stepPinR, motorState);
+    digitalWrite(stepPinL, motorState);
+  }
 
 }
-
 
 
 float imu(){
@@ -139,7 +154,6 @@ float imu(){
    //Once again we shift and sum
    Gyr_rawX=Wire.read()<<8|Wire.read(); // 0x3B (ACCEL_XOUT_H) & 0x3C (ACCEL_XOUT_L)
    Gyr_rawY=Wire.read()<<8|Wire.read(); // 0x3D (ACCEL_YOUT_H) & 0x3E (ACCEL_YOUT_L)
-   //GyZ = Wire.read()<<8|Wire.read(); // 0x3F (ACCEL_ZOUT_H) & 0x40 (ACCEL_ZOUT_L) //not being used in this test
    /*---X---*/
    Gyro_angle[0] = Gyr_rawX/131.0; 
    /*---Y---*/
