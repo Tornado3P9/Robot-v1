@@ -37,12 +37,12 @@ const int dirPinR = 2;
 const int stepPinR = 4;
 const int dirPinL = 15;
 const int stepPinL = 18;
-//int SPR = 400; //stepsPerRevolution
+//stepsPerRevolution fuer Half-Step = 400
 int motorState = LOW; //Steppermotoren bekommen wechselnd HIGH und LOW voltage
 int motorRDir = HIGH; //motor direction clockwise
 int motorLDir = LOW;  //motor direction counterclockwise
 unsigned long previousMicros = 0;
-long interval = 500000; //interval in microseconds
+long interval = 1000; //interval in microseconds
 
 // Define LED pin
 const int LED_SETUP = 5;
