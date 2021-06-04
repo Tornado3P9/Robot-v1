@@ -18,6 +18,9 @@ float deviation;
 // Define Functions
 float imu();
 
+// Define LED pin
+const int LED_SETUP = 5;
+
 /************* PID kram *************/
 float PID, pwmLeft, pwmRight, error, previous_error;
 float pid_p=0;
@@ -29,7 +32,7 @@ double ki=0.005;//0.003
 double kd=2.05;//2.05
 ///////////////////////////////////////////////
 float desired_angle = 0; //This is the angle in which we want the
-                         //balance to stay steady
+                         //balance to stay steady: 0 degrees for standing, 20 degrees for driving
 
 /************* Motor kram *************/
 // Define pin connections & motor's steps per revolution
@@ -47,8 +50,9 @@ int tempX;
 // Define max-Function
 float max(float a, float b);
 
-// Define LED pin
-const int LED_SETUP = 5;
+/************* Voltage Measurement kram *************/
+float voltage;
+const int serial_vn = 36;
 
 
 void setup() {
@@ -71,6 +75,9 @@ void setup() {
   pinMode(stepPinL, OUTPUT);
   pinMode(dirPinL, OUTPUT);
 
+  // Declare Voltage Measurement pin as Input
+  pinMode(serial_vn, INPUT);
+  
   timeH = millis(); //Start counting time in milliseconds
 
   //calibrate deviation -> funny enough no Mean-Calculation necessary
@@ -87,13 +94,13 @@ void loop() {
 
 /////////////////////////////I M U/////////////////////////////////////
 
-  Serial.print(imu() + deviation); Serial.print(" , ");    // y-angle
-  Serial.println(deviation);
+  Serial.print(imu() + deviation); Serial.print(" , ");    // x-angle
+  Serial.print(deviation); Serial.print(" , ");
   /*In Arduino IDE open Serial Monitor or Serial Plotter*/
 
 /////////////////////////////P I D/////////////////////////////////////
 
-  error = Total_angle[1] - desired_angle;
+  error = imu() + deviation - desired_angle;
 /*
   pid_p = kp*error;
 
@@ -138,6 +145,15 @@ void loop() {
     digitalWrite(stepPinL, motorState);
   }
 
+/////////////////////////////VOLTAGE/////////////////////////////////////
+  voltage = (float)analogRead(36) / 4096 * 14.8 * 28695 / 28700;
+  Serial.print(voltage,1); Serial.println("v");
+  if (voltage < 12.8) {
+    digitalWrite(LED_SETUP, HIGH); //Using unused setup_led as warning signal
+  }
+
+/////////////////////////////SERVER/////////////////////////////////////
+// server();
 }
 
 
@@ -158,28 +174,29 @@ float imu(){
    /*---X---*/
    Acceleration_angle[0] = atan((Acc_rawY/16384.0)/sqrt(pow((Acc_rawX/16384.0),2) + pow((Acc_rawZ/16384.0),2)))*rad_to_deg;
    /*---Y---*/
-   Acceleration_angle[1] = atan(-1*(Acc_rawX/16384.0)/sqrt(pow((Acc_rawY/16384.0),2) + pow((Acc_rawZ/16384.0),2)))*rad_to_deg;
+   //Acceleration_angle[1] = atan(-1*(Acc_rawX/16384.0)/sqrt(pow((Acc_rawY/16384.0),2) + pow((Acc_rawZ/16384.0),2)))*rad_to_deg;
  
    Wire.beginTransmission(MPU_ADDR);
    Wire.write(0x43); //Gyro data first adress
    Wire.endTransmission(false);
-   Wire.requestFrom(MPU_ADDR,4,true); //request just 4 registers
+   //Wire.requestFrom(MPU_ADDR,4,true); //request just 4 registers
+   Wire.requestFrom(MPU_ADDR,2,true); //request just 2 registers when only using x-axis
 
    //Once again we shift and sum
    Gyr_rawX=Wire.read()<<8|Wire.read(); // 0x3B (ACCEL_XOUT_H) & 0x3C (ACCEL_XOUT_L)
-   Gyr_rawY=Wire.read()<<8|Wire.read(); // 0x3D (ACCEL_YOUT_H) & 0x3E (ACCEL_YOUT_L)
+   //Gyr_rawY=Wire.read()<<8|Wire.read(); // 0x3D (ACCEL_YOUT_H) & 0x3E (ACCEL_YOUT_L)
    /*---X---*/
    Gyro_angle[0] = Gyr_rawX/131.0; 
    /*---Y---*/
-   Gyro_angle[1] = Gyr_rawY/131.0;
+   //Gyro_angle[1] = Gyr_rawY/131.0;
    
    /*---X axis angle---*/
    Total_angle[0] = 0.98 *(Total_angle[0] + Gyro_angle[0]*elapsedTime) + 0.02*Acceleration_angle[0];
    /*---Y axis angle---*/
-   Total_angle[1] = 0.98 *(Total_angle[1] + Gyro_angle[1]*elapsedTime) + 0.02*Acceleration_angle[1];
+   //Total_angle[1] = 0.98 *(Total_angle[1] + Gyro_angle[1]*elapsedTime) + 0.02*Acceleration_angle[1];
 
    /*Now we have our angles in degree and values from -100º to 100º aprox*/
-   return Total_angle[1];
+   return Total_angle[0];
 }
 
 float max(float a, float b){
