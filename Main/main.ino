@@ -52,7 +52,7 @@ float max(float a, float b);
 
 /************* Voltage Measurement kram *************/
 float voltage;
-const int serial_vn = 36;
+const int sensor_vp = 36;
 
 
 void setup() {
@@ -76,7 +76,7 @@ void setup() {
   pinMode(dirPinL, OUTPUT);
 
   // Declare Voltage Measurement pin as Input
-  pinMode(serial_vn, INPUT);
+  pinMode(sensor_vp, INPUT);
   
   timeH = millis(); //Start counting time in milliseconds
 
@@ -146,10 +146,10 @@ void loop() {
   }
 
 /////////////////////////////VOLTAGE/////////////////////////////////////
-  voltage = (float)analogRead(36) / 4096 * 14.8 * 28695 / 28700;
+  voltage = (float)analogRead(sensor_vp) / 4096 * 14.8 * 28695 / 28700;
   Serial.print(voltage,1); Serial.println("v");
   if (voltage < 12.8) {
-    digitalWrite(LED_SETUP, HIGH); //Using unused setup_led as warning signal
+    digitalWrite(LED_SETUP, HIGH); //Using inactive setup_led as warning signal
   }
 
 /////////////////////////////SERVER/////////////////////////////////////
