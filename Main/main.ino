@@ -127,7 +127,7 @@ void loop() {
   }
 
 /////////////////////////////MOTOR/////////////////////////////////////
-  unsigned long currentMicros = micros();  //Bei jedem Durchlauf neu erstellen und damit die Lifetime von 70min umgehen.
+  unsigned long currentMicros = micros();
   if (currentMicros - previousMicros >= interval) {
     previousMicros = currentMicros;
 
