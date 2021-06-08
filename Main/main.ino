@@ -32,7 +32,7 @@ double ki=0.005;//0.003
 double kd=2.05;//2.05
 ///////////////////////////////////////////////
 float desired_angle = 0; //This is the angle in which we want the
-                         //balance to stay steady: 0 degrees for standing, 20 degrees for driving
+//balance to stay steady: 0 degrees for standing, 20 degrees for driving
 
 /************* Motor kram *************/
 // Define pin connections & motor's steps per revolution
@@ -46,7 +46,6 @@ int motorRDir = HIGH; //motor direction clockwise
 int motorLDir = LOW;  //motor direction counterclockwise
 unsigned long previousMicros = 0;
 long interval = 1000; //interval in microseconds //maybe change to 'short'
-int tempX;
 // Define max-Function
 float max(float a, float b);
 
@@ -94,14 +93,16 @@ void loop() {
 
 /////////////////////////////I M U/////////////////////////////////////
 
-  Serial.print(imu() + deviation); Serial.print(" , ");    // x-angle
+  error = imu() + deviation - desired_angle;
+
+  Serial.print(error); Serial.print(" , ");    // x-angle
   Serial.print(deviation); Serial.print(" , ");
   /*In Arduino IDE open Serial Monitor or Serial Plotter*/
 
 /////////////////////////////P I D/////////////////////////////////////
-
-  error = imu() + deviation - desired_angle;
 /*
+  error = imu() + deviation - desired_angle;
+
   pid_p = kp*error;
 
   if(-3 <error <3){
@@ -117,14 +118,8 @@ void loop() {
 */
 
   //Or using quadratic fit{{-30,50},{0,1000},{30,50}} = 1000 - 1.05556*x**2
-  interval = max(50.0, 1000 - (1.05556*(error*error)); //der Wert soll nicht in den Minusbereich abdriften
-  if(error < 0){
-    motorRDir = LOW;  //motor direction counterclockwise
-    motorLDir = HIGH; //motor direction clockwise
-  } else {
-    motorRDir = HIGH; //motor direction clockwise
-    motorLDir = LOW;  //motor direction counterclockwise
-  }
+  interval = max(200.0, 1500 - (0.641975*(error*error))); //der Wert soll nicht in den Minusbereich abdriften
+  Serial.println(interval);
 
 /////////////////////////////MOTOR/////////////////////////////////////
   unsigned long currentMicros = micros();
@@ -132,6 +127,13 @@ void loop() {
     previousMicros = currentMicros;
 
     // Set motor direction
+    if(error < 0){
+      motorRDir = LOW;  //motor direction counterclockwise
+      motorLDir = HIGH; //motor direction clockwise
+    } else {
+      motorRDir = HIGH; //motor direction clockwise
+      motorLDir = LOW;  //motor direction counterclockwise
+    }
     digitalWrite(dirPinR, motorRDir);
     digitalWrite(dirPinL, motorLDir);
 
