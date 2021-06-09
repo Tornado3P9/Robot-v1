@@ -46,7 +46,7 @@ int motorLDir = LOW;  //motor direction counterclockwise
 unsigned long previousMicros = 0;
 long interval = 1000; //interval in microseconds, fast=20, slow=1000
 // Define max-Function
-float max(float a, float b);
+float minimal(float a, float b);
 
 /************* Voltage Measurement kram *************/
 float voltage;
@@ -76,7 +76,7 @@ void setup() {
   // Declare Voltage Measurement pin as Input
   pinMode(sensor_vp, INPUT);
   
-  timeH = millis(); //Start counting time in milliseconds
+  timeH = 0;
 
   //calibrate deviation -> funny enough no Mean-Calculation necessary
   for(i=0; i<500; i++){
@@ -117,7 +117,7 @@ void loop() {
 */
 
   // if(-2 <error <2){ disable motor using enable_pin }
-  float temp = max(200.0, 1000 - (0.392*(error*error))); //der Wert soll nicht in den Minusbereich abdriften
+  float temp = minimal(20.0, 1000 - (0.392*(error*error))); //der Wert soll nicht in den Minusbereich abdriften
   interval = (long)temp;
   Serial.println(interval);
 
@@ -161,8 +161,8 @@ void loop() {
 
 float imu(){
    timePrev = timeH;  // the previous time is stored before the actual time read
-   timeH = millis();  // actual time read
-   elapsedTime = (timeH - timePrev) / 1000;
+   timeH = micros();  // actual time read
+   elapsedTime = (timeH - timePrev) / 1000000;
   
    Wire.beginTransmission(MPU_ADDR);
    Wire.write(0x3B); //Ask for/start with the 0x3B register- correspond to AcX (ACCEL_XOUT_H)
@@ -201,7 +201,7 @@ float imu(){
    return Total_angle[0];
 }
 
-float max(float a, float b){
+float minimal(float a, float b){
   if(a>=b){
     return a;
   } else {
