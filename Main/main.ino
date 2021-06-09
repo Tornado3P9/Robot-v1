@@ -1,11 +1,13 @@
 #include <Wire.h>
 
+// Define LED pin
+const int LED_STATUS = 5;
+
 /************* IMU kram *************/
 /*MPU-6050 gives you 16 bits data so you have to create some 16int constants
  * to store the data for accelerations and gyro*/
-
-const int MPU_ADDR = 0x68; // I2C address of the MPU-6050
 int16_t Acc_rawX, Acc_rawY, Acc_rawZ,Gyr_rawX, Gyr_rawY, Gyr_rawZ;
+const int MPU_ADDR = 0x68; // I2C address of the MPU-6050. If ADO is HIGH -> 0x69
 
 float Acceleration_angle[2];
 float Gyro_angle[2];
@@ -18,9 +20,6 @@ float deviation;
 // Define Functions
 float imu();
 
-// Define LED pin
-const int LED_SETUP = 5;
-
 /************* PID kram *************/
 float PID, pwmLeft, pwmRight, error, previous_error;
 float pid_p=0;
@@ -32,7 +31,7 @@ double ki=0.005;//0.003
 double kd=2.05;//2.05
 ///////////////////////////////////////////////
 float desired_angle = 0; //This is the angle in which we want the
-//balance to stay steady: 0 degrees for standing, 20 degrees for driving
+//balance to stay steady: 0 degrees for standing, maybe 20 degrees for driving
 
 /************* Motor kram *************/
 // Define pin connections & motor's steps per revolution
@@ -45,7 +44,7 @@ int motorState = LOW; //Steppermotoren bekommen wechselnd HIGH und LOW voltage
 int motorRDir = HIGH; //motor direction clockwise
 int motorLDir = LOW;  //motor direction counterclockwise
 unsigned long previousMicros = 0;
-long interval = 1000; //interval in microseconds //maybe change to 'short'
+long interval = 1000; //interval in microseconds, fast=20, slow=1000
 // Define max-Function
 float max(float a, float b);
 
@@ -57,9 +56,9 @@ const int sensor_vp = 36;
 void setup() {
   Serial.begin(115200);
   // Initialize LED pin as an output
-  pinMode(LED_SETUP, OUTPUT);
-  // LED_SETUP = ON
-  digitalWrite(LED_SETUP, HIGH);
+  pinMode(LED_STATUS, OUTPUT);
+  // LED_STATUS = ON
+  digitalWrite(LED_STATUS, HIGH);
 
   // MPU6050 communication begin
   Wire.begin();
@@ -85,8 +84,8 @@ void setup() {
   }
   deviation = imu() * (-1);
 
-  // LED_SETUP = OFF
-  digitalWrite(LED_SETUP, LOW);
+  // LED_STATUS = OFF
+  digitalWrite(LED_STATUS, LOW);
 }
 
 void loop() {
@@ -117,8 +116,9 @@ void loop() {
   previous_error = error;
 */
 
-  //Or using quadratic fit{{-30,50},{0,1000},{30,50}} = 1000 - 1.05556*x**2
-  interval = max(200.0, 1500 - (0.641975*(error*error))); //der Wert soll nicht in den Minusbereich abdriften
+  // if(-2 <error <2){ disable motor using enable_pin }
+  float temp = max(200.0, 1000 - (0.392*(error*error))); //der Wert soll nicht in den Minusbereich abdriften
+  interval = (long)temp;
   Serial.println(interval);
 
 /////////////////////////////MOTOR/////////////////////////////////////
@@ -151,7 +151,7 @@ void loop() {
   voltage = (float)analogRead(sensor_vp) / 4096 * 14.8 * 28695 / 28700;
   Serial.print(voltage,1); Serial.println("v");
   if (voltage < 12.8) {
-    digitalWrite(LED_SETUP, HIGH); //Using inactive setup_led as warning signal
+    digitalWrite(LED_STATUS, HIGH); //Using inactive status led as warning signal
   }
 
 /////////////////////////////SERVER/////////////////////////////////////
