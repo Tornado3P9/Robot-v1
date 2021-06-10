@@ -41,8 +41,8 @@ const int dirPinL = 15;
 const int stepPinL = 18;
 //stepsPerRevolution fuer Half-Step = 400
 int motorState = LOW; //Steppermotoren bekommen wechselnd HIGH und LOW voltage
-int motorRDir = HIGH; //motor direction clockwise
-int motorLDir = LOW;  //motor direction counterclockwise
+int R_motorDir = HIGH; //motor direction clockwise
+int L_motorDir = LOW;  //motor direction counterclockwise
 unsigned long previousMicros = 0;
 long interval = 1000; //interval in microseconds, fast=20, slow=1000
 // Define max-Function
@@ -74,14 +74,14 @@ void setup() {
   pinMode(dirPinL, OUTPUT);
 
   // Declare Voltage Measurement pin as Input, may not be necessary if microprocessor
-  // has it set to 0 on startup and therefore would make it an Input automaticly or sth.
+  // has it set to 0 on startup and therefore would make it an Input automatically or sth.
   // Also, some pins are input-only. So maybe only ouput needs to be defined?
   pinMode(sensor_vp, INPUT);
   
   timeH = 0;
 /*
   for(i=0; i<500; i++){                                                   //Create 500 loops
-    if(receive_counter % 15 == 0)digitalWrite(statusLED, !digitalRead(statusLED));  //Change the state of the LED every 15 loops to make the LED blink fast
+    if(i % 15 == 0)digitalWrite(statusLED, !digitalRead(statusLED));      //Change the state of the LED every 15 loops to make the LED blink fast
     Wire.beginTransmission(MPU_ADDR);                                     //Start communication with the gyro
     Wire.write(0x43);                                                     //Start reading the Who_am_I register 75h
     Wire.endTransmission();                                               //End the transmission
@@ -90,7 +90,7 @@ void setup() {
     delayMicroseconds(3700);                                              //Wait for 3700 microseconds to simulate the main program loop time
   }
   deviation /= 500;                                                       //Divide the total value by 500 to get the avarage gyro offset
-  deviation *= -1;                                                        //Getting ready to use deviation error
+  deviation *= -1;                                                        //Getting ready-to-use deviation error
 */
   //calibrate deviation -> funny enough no Mean-Calculation necessary
   for(i=0; i<500; i++){
@@ -142,14 +142,14 @@ void loop() {
 
     // Set motor direction
     if(error < 0){
-      motorRDir = LOW;  //motor direction counterclockwise
-      motorLDir = HIGH; //motor direction clockwise
+      R_motorDir = LOW;  //motor direction counterclockwise
+      L_motorDir = HIGH; //motor direction clockwise
     } else {
-      motorRDir = HIGH; //motor direction clockwise
-      motorLDir = LOW;  //motor direction counterclockwise
+      R_motorDir = HIGH; //motor direction clockwise
+      L_motorDir = LOW;  //motor direction counterclockwise
     }
-    digitalWrite(dirPinR, motorRDir);
-    digitalWrite(dirPinL, motorLDir);
+    digitalWrite(dirPinR, R_motorDir);
+    digitalWrite(dirPinL, L_motorDir);
 
     // Spin motor
     if (motorState == LOW) {

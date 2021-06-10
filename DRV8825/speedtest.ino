@@ -30,6 +30,7 @@ void loop(){
   
   unsigned long currentMillis = millis();
   
+  // These four lines result in 1 step:
   digitalWrite(stepPin, HIGH);
   delayMicroseconds(interval);
   digitalWrite(stepPin, LOW);
