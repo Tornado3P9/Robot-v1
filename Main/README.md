@@ -10,3 +10,6 @@ As mentioned here, resetting millis() or micros() is not necessary when only cal
 time difference!  
 
 https://lastminuteengineers.com/esp32-ota-updates-arduino-ide/  
+
+https://youtu.be/648Tx5N9Zoc  
+Between Arduino IDE and Atmel Studio  
