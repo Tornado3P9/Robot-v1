@@ -1,7 +1,7 @@
 #include <Wire.h>
 
 // Define LED pin
-const int LED_STATUS = 5;
+const int statusLED = 5;
 
 /************* IMU kram *************/
 /*MPU-6050 gives you 16 bits data so you have to create some 16int constants
@@ -56,9 +56,9 @@ const int sensor_vp = 36;
 void setup() {
   Serial.begin(115200);
   // Initialize LED pin as an output
-  pinMode(LED_STATUS, OUTPUT);
-  // LED_STATUS = ON
-  digitalWrite(LED_STATUS, HIGH);
+  pinMode(statusLED, OUTPUT);
+  // statusLED = ON
+  digitalWrite(statusLED, HIGH);
 
   // MPU6050 communication begin
   Wire.begin();
@@ -84,8 +84,8 @@ void setup() {
   }
   deviation = imu() * (-1);
 
-  // LED_STATUS = OFF
-  digitalWrite(LED_STATUS, LOW);
+  // statusLED = OFF
+  digitalWrite(statusLED, LOW);
 }
 
 void loop() {
@@ -151,7 +151,7 @@ void loop() {
   voltage = (float)analogRead(sensor_vp) / 4096 * 14.8 * 28695 / 28700;
   Serial.print(voltage,1); Serial.println("v");
   if (voltage < 12.8) {
-    digitalWrite(LED_STATUS, HIGH); //Using inactive status led as warning signal
+    digitalWrite(statusLED, HIGH); //Using inactive status led as warning signal
   }
 
 /////////////////////////////SERVER/////////////////////////////////////
