@@ -73,11 +73,25 @@ void setup() {
   pinMode(stepPinL, OUTPUT);
   pinMode(dirPinL, OUTPUT);
 
-  // Declare Voltage Measurement pin as Input
+  // Declare Voltage Measurement pin as Input, may not be necessary if microprocessor
+  // has it set to 0 on startup and therefore would make it an Input automaticly or sth.
+  // Also, some pins are input-only. So maybe only ouput needs to be defined?
   pinMode(sensor_vp, INPUT);
   
   timeH = 0;
-
+/*
+  for(i=0; i<500; i++){                                                   //Create 500 loops
+    if(receive_counter % 15 == 0)digitalWrite(statusLED, !digitalRead(statusLED));  //Change the state of the LED every 15 loops to make the LED blink fast
+    Wire.beginTransmission(MPU_ADDR);                                     //Start communication with the gyro
+    Wire.write(0x43);                                                     //Start reading the Who_am_I register 75h
+    Wire.endTransmission();                                               //End the transmission
+    Wire.requestFrom(MPU_ADDR, 2);                                        //Request 2 bytes from the gyro
+    deviation += Wire.read()<<8|Wire.read();                              //Combine the two bytes to make one integer
+    delayMicroseconds(3700);                                              //Wait for 3700 microseconds to simulate the main program loop time
+  }
+  deviation /= 500;                                                       //Divide the total value by 500 to get the avarage gyro offset
+  deviation *= -1;                                                        //Getting ready to use deviation error
+*/
   //calibrate deviation -> funny enough no Mean-Calculation necessary
   for(i=0; i<500; i++){
     imu(); //let it reach optimal operation temperature?
