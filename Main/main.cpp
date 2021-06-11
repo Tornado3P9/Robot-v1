@@ -1,3 +1,6 @@
+// Include Arduino framework
+#include <Arduino.h>
+// Include Wire Library for I2C Communications
 #include <Wire.h>
 
 // Define LED pin
