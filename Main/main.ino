@@ -130,12 +130,14 @@ void loop() {
   previous_error = error;
 */
 
-  // if(-2 <error <2){ disable motor using enable_pin }
   float temp = minimal(20.0, 1000 - (0.392*(error*error))); //der Wert soll nicht in den Minusbereich abdriften
   interval = (long)temp;
   Serial.println(interval);
 
 /////////////////////////////MOTOR/////////////////////////////////////
+  // if(-2 <error <2){ disable motor using enable_pin to reduce unnecessary jerking movements while standing }
+  // if(error > 45){ disable motor using enable_pin because the robot is falling either way }
+
   unsigned long currentMicros = micros();
   if (currentMicros - previousMicros >= interval) {
     previousMicros = currentMicros;
