@@ -196,7 +196,7 @@ void loop() {
 //  }
 
 /////////////////////////////SERVER/////////////////////////////////////
-//  server();
+  server();
 }
 
 
@@ -250,4 +250,6 @@ float minimal(float a, float b){
   }
 }
 
-void server(){;}
+void server(){
+
+}

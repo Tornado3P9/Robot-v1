@@ -26,7 +26,7 @@ void loop() {
 
     totalInterruptCounter++;
 
-    Serial.print("An interrupt as occurred. Total number: ");
+    Serial.print("An interrupt has occurred. Total number: ");
     Serial.println(totalInterruptCounter);
   }
 }
