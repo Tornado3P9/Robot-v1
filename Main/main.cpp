@@ -150,10 +150,10 @@ void loop() {
   // if(-2 <error <2){ disable motor using enable_pin to reduce unnecessary jerking movements while standing }
   // if(error < -45 || error > 45){ disable motor using enable_pin because the robot is falling either way }
   if ((1 > abs(error)) || (abs(error) > 40)) {
-    //digitalWrite(enablePin, LOW);  // driver is inactive
+    //digitalWrite(enablePin, HIGH);  // driver is inactive
     digitalWrite(statusLED, LOW);
   } else {
-    //digitalWrite(enablePin, HIGH); // driver is active
+    //digitalWrite(enablePin, LOW); // driver is active
     digitalWrite(statusLED, HIGH);
   }
   
