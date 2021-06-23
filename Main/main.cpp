@@ -45,11 +45,11 @@ const int stepPinR = 4;
 const int dirPinL = 15;
 const int stepPinL = 18;
 const int enablePin = 19;
-int motorState = LOW;  //Steppermotoren bekommen wechselnd HIGH und LOW voltage
+int motorState = LOW;   //Steppermotoren bekommen wechselnd HIGH und LOW voltage
 int R_motor_Dir = HIGH; //motor direction clockwise
 int L_motor_Dir = LOW;  //motor direction counterclockwise
 unsigned long previousMicros = 0;
-long interval = 1000;  //interval in microseconds, fast=20, slow=1000
+long interval = 1000;   //interval in microseconds, fast=20, slow=1000
 // Define max-Function
 float minimal(float a, float b);
 
@@ -84,8 +84,8 @@ void setup() {
 
   // Declare Voltage Measurement pin as Input, may not be necessary if microprocessor
   // has it set to 0 on startup and therefore would make it an Input automatically or sth.
-  // Also, some pins are input-only. So maybe only ouput needs to be defined?
-  pinMode(sensor_vp, INPUT);
+  // Also, some pins are input-only. So maybe only ouput needs to be defined!
+  // pinMode(sensor_vp, INPUT);
   
   timeH = 0;
 /*
@@ -114,8 +114,9 @@ void setup() {
 void loop() {
 
 /////////////////////////////I M U/////////////////////////////////////
-
+  unsigned long stopTime = micros();    //stopTime start
   error = imu() + deviation - desired_angle;
+  //Serial.println(micros() - stopTime);  //stopTime end = 1500us
 
   Serial.print(error); Serial.print(" , ");    // x-angle
   Serial.print(deviation); Serial.print(" , ");
@@ -139,20 +140,24 @@ void loop() {
   previous_error = error;
 */
 
-  float temp = minimal(20.0, 1000 - (0.392*(error*error))); //der Wert soll nicht in den Minusbereich abdriften
+  //float temp = minimal(20.0, 1000 - (0.392*(error*error))); //der Wert soll nicht in den Minusbereich abdriften
+  float temp = minimal(10, 300 - (0.322*(error*error)));
   interval = (long)temp;
-  Serial.print(interval); Serial.print(" , ");
+  //Serial.print(interval); Serial.print(" , ");
 
 /////////////////////////////MOTOR/////////////////////////////////////
 
   // if(-2 <error <2){ disable motor using enable_pin to reduce unnecessary jerking movements while standing }
   // if(error < -45 || error > 45){ disable motor using enable_pin because the robot is falling either way }
-  if ((2 < abs(error)) || (abs(error) < 45)) {
-    digitalWrite(enablePin, LOW);  // driver is active
+  if ((1 > abs(error)) || (abs(error) > 40)) {
+    //digitalWrite(enablePin, LOW);  // driver is inactive
+    digitalWrite(statusLED, LOW);
   } else {
-    digitalWrite(enablePin, HIGH); // driver is inactive
+    //digitalWrite(enablePin, HIGH); // driver is active
+    digitalWrite(statusLED, HIGH);
   }
   
+  // folgender Teil sollte vielleicht im IRAM per ISR ausgeführt werden
   unsigned long currentMicros = micros();
   if (currentMicros - previousMicros >= interval) {
     previousMicros = currentMicros;
@@ -169,24 +174,29 @@ void loop() {
     digitalWrite(dirPinL, L_motor_Dir);
 
     // Spin motor
-    if (motorState == LOW) {
-        motorState = HIGH;
-    } else {
-        motorState = LOW;
-    }
-    digitalWrite(stepPinR, motorState);
-    digitalWrite(stepPinL, motorState);
+    //if (motorState == LOW) {
+    //    motorState = HIGH;
+    //} else {
+    //    motorState = LOW;
+    //}
+    digitalWrite(stepPinR, HIGH);
+    digitalWrite(stepPinL, HIGH);
+    digitalWrite(stepPinR, LOW);
+    digitalWrite(stepPinL, LOW);
   }
+
+//////////////////////////////////////////////////////////
+  Serial.println(micros() - stopTime); // = 1590us without voltage and server
 
 /////////////////////////////VOLTAGE/////////////////////////////////////
-  voltage = (float)analogRead(sensor_vp) / 4096 * 14.8 * 28695 / 28700;
-  Serial.print(voltage,1); Serial.println("v");
-  if (voltage < 12.8) {
-    digitalWrite(statusLED, HIGH); //Using inactive status led as warning signal
-  }
+//  voltage = (float)analogRead(sensor_vp) / 4096 * 14.8 * 28695 / 28700;
+//  Serial.print(voltage,1); Serial.println("v");
+//  if (voltage < 12.8) {
+//    digitalWrite(statusLED, HIGH); //Using inactive status led as warning signal
+//  }
 
 /////////////////////////////SERVER/////////////////////////////////////
-  server();
+//  server();
 }
 
 
