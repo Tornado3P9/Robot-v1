@@ -1,6 +1,6 @@
 // Include Arduino framework
 #include <Arduino.h>
-// Include Wire Library for I2C Communications
+// Include Wire Library for I2C Communications with the gyro
 #include <Wire.h>
 
 // Define LED pin
@@ -41,9 +41,9 @@ float temp;
 /************* Motor kram *************/
 // stepsPerRevolution for Full Step = 200, 1.8 degrees for each Step
 // Define pin connections
-const int dirPinR = 2;
+const int dirPinR = 2; //(SD_DATA0 External pulldown) If HIGH during boot, then no new content can be flashed
 const int stepPinR = 4;
-const int dirPinL = 15;
+const int dirPinL = 15; //If LOW, the the esp will not show the log anymore at bootup (Serial.print)
 const int stepPinL = 18;
 const int enablePin = 19;
 int R_motor_Dir = HIGH; //motor direction clockwise
