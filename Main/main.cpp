@@ -36,6 +36,7 @@ double kd=2.05;//2.05
 ///////////////////////////////////////////////
 float desired_angle = 0; //This is the angle in which we want the
 //balance to stay steady: 0 degrees for standing, maybe 20 degrees for driving
+float temp;
 
 /************* Motor kram *************/
 // stepsPerRevolution for Full Step = 200, 1.8 degrees for each Step
@@ -45,13 +46,20 @@ const int stepPinR = 4;
 const int dirPinL = 15;
 const int stepPinL = 18;
 const int enablePin = 19;
-int motorState = LOW;   //Steppermotoren bekommen wechselnd HIGH und LOW voltage
 int R_motor_Dir = HIGH; //motor direction clockwise
 int L_motor_Dir = LOW;  //motor direction counterclockwise
-unsigned long previousMicros = 0;
-long interval = 1000;   //interval in microseconds, fast=20, slow=1000
 // Define max-Function
 float minimal(float a, float b);
+
+/************* Motor ISR kram *************/
+/* create a hardware timer */
+hw_timer_t * timer = NULL;
+portMUX_TYPE timerMux = portMUX_INITIALIZER_UNLOCKED;
+
+volatile byte state = LOW;    //Steppermotoren bekommen wechselnd HIGH und LOW voltage
+volatile int interval = 900;  //interval in microseconds, fast=20, slow=1000
+volatile unsigned long previousMicros = 0;
+volatile unsigned long currentMicros = 0;
 
 /************* Voltage Measurement kram *************/
 float voltage;
@@ -59,6 +67,21 @@ const int sensor_vp = 36;
 
 /************* Server kram *************/
 void server();
+
+
+
+void IRAM_ATTR onTimer(){
+  currentMicros = micros();
+  if (currentMicros - previousMicros > interval) {
+    previousMicros = currentMicros;
+
+    state = !state;
+    //digitalWrite(statusLED, state);
+    
+    digitalWrite(stepPinR, state);
+    digitalWrite(stepPinL, state);
+  }
+}
 
 
 void setup() {
@@ -82,30 +105,35 @@ void setup() {
   pinMode(dirPinL, OUTPUT);
   pinMode(enablePin, OUTPUT);
 
+  // Disable Stepper Driver at start
+  digitalWrite(enablePin, HIGH);
+
   // Declare Voltage Measurement pin as Input, may not be necessary if microprocessor
   // has it set to 0 on startup and therefore would make it an Input automatically or sth.
-  // Also, some pins are input-only. So maybe only ouput needs to be defined!
+  // Also, some pins are input-only. So only ouput needs to be defined!
   // pinMode(sensor_vp, INPUT);
   
   timeH = 0;
-/*
-  for(i=0; i<500; i++){                                                   //Create 500 loops
-    if(i % 15 == 0)digitalWrite(statusLED, !digitalRead(statusLED));      //Change the state of the LED every 15 loops to make the LED blink fast
-    Wire.beginTransmission(MPU_ADDR);                                     //Start communication with the gyro
-    Wire.write(0x43);                                                     //Start reading the Who_am_I register 75h
-    Wire.endTransmission();                                               //End the transmission
-    Wire.requestFrom(MPU_ADDR, 2);                                        //Request 2 bytes from the gyro
-    deviation += Wire.read()<<8|Wire.read();                              //Combine the two bytes to make one integer
-    delayMicroseconds(3700);                                              //Wait for 3700 microseconds to simulate the main program loop time
-  }
-  deviation /= 500;                                                       //Divide the total value by 500 to get the avarage gyro offset
-  deviation *= -1;                                                        //Getting ready-to-use deviation error
-*/
+  temp = 1000; //beginne halt nur nicht bei 0 oder generell zu schnell fuer den Motor
+
   //calibrate deviation -> funny enough no Mean-Calculation necessary
   for(i=0; i<500; i++){
+    //if(i % 15 == 0)digitalWrite(statusLED, !digitalRead(statusLED));
     imu(); //let it reach optimal operation temperature?
   }
   deviation = imu() * (-1);
+
+  /* Use 1st timer of 4 */
+  /* 1 tick take 1/(80MHZ/80) = 1us so we set divider 80 and count up */
+  timer = timerBegin(0, 80, true);
+  /* Attach onTimer function to our timer */
+  timerAttachInterrupt(timer, &onTimer, true);
+  /* Set alarm to call onTimer function every second 1 tick is 1us
+  => 1 second is 1000000us */
+  /* Repeat the alarm (third parameter) */
+  timerAlarmWrite(timer, 20, true);
+  /* Start an alarm */
+  timerAlarmEnable(timer);
 
   // statusLED = OFF
   digitalWrite(statusLED, LOW);
@@ -114,8 +142,8 @@ void setup() {
 void loop() {
 
 /////////////////////////////I M U/////////////////////////////////////
-  unsigned long stopTime = micros();    //stopTime start
-  error = imu() + deviation - desired_angle;
+  //unsigned long stopTime = micros();    //stopTime start
+  error = imu() + deviation + desired_angle;
   //Serial.println(micros() - stopTime);  //stopTime end = 1500us
 
   Serial.print(error); Serial.print(" , ");    // x-angle
@@ -140,59 +168,48 @@ void loop() {
   previous_error = error;
 */
 
-  //float temp = minimal(20.0, 1000 - (0.392*(error*error))); //der Wert soll nicht in den Minusbereich abdriften
-  float temp = minimal(10, 300 - (0.322*(error*error)));
+  if (error < 0) {
+    temp = minimal(50.0, 500 + (10.6667*error));
+  } else if(error > 0) {
+    temp = minimal(50.0, 500 - (10.6667*error));
+  }
+
+  portENTER_CRITICAL(&timerMux);
   interval = (long)temp;
-  //Serial.print(interval); Serial.print(" , ");
+  portEXIT_CRITICAL(&timerMux);
+
+  Serial.print(interval); Serial.print(" , ");
 
 /////////////////////////////MOTOR/////////////////////////////////////
 
   // if(-2 <error <2){ disable motor using enable_pin to reduce unnecessary jerking movements while standing }
   // if(error < -45 || error > 45){ disable motor using enable_pin because the robot is falling either way }
   if ((1 > abs(error)) || (abs(error) > 40)) {
-    //digitalWrite(enablePin, HIGH);  // driver is inactive
+    digitalWrite(enablePin, HIGH); // driver is inactive
     digitalWrite(statusLED, LOW);
   } else {
-    //digitalWrite(enablePin, LOW); // driver is active
+    digitalWrite(enablePin, LOW);  // driver is active
     digitalWrite(statusLED, HIGH);
   }
   
-  // folgender Teil sollte vielleicht im IRAM per ISR ausgeführt werden
-  unsigned long currentMicros = micros();
-  if (currentMicros - previousMicros >= interval) {
-    previousMicros = currentMicros;
-
-    // Set motor direction
-    if(error < 0){
-      R_motor_Dir = LOW;  //motor direction counterclockwise
-      L_motor_Dir = HIGH; //motor direction clockwise
-    } else {
-      R_motor_Dir = HIGH; //motor direction clockwise
-      L_motor_Dir = LOW;  //motor direction counterclockwise
-    }
-    digitalWrite(dirPinR, R_motor_Dir);
-    digitalWrite(dirPinL, L_motor_Dir);
-
-    // Spin motor
-    //if (motorState == LOW) {
-    //    motorState = HIGH;
-    //} else {
-    //    motorState = LOW;
-    //}
-    digitalWrite(stepPinR, HIGH);
-    digitalWrite(stepPinL, HIGH);
-    digitalWrite(stepPinR, LOW);
-    digitalWrite(stepPinL, LOW);
+  // Set motor direction
+  if(error < 0){
+    R_motor_Dir = LOW;  //motor direction counterclockwise
+    L_motor_Dir = HIGH; //motor direction clockwise
+  } else {
+    R_motor_Dir = HIGH; //motor direction clockwise
+    L_motor_Dir = LOW;  //motor direction counterclockwise
   }
+  digitalWrite(dirPinR, R_motor_Dir);
+  digitalWrite(dirPinL, L_motor_Dir);
 
-//////////////////////////////////////////////////////////
-  Serial.println(micros() - stopTime); // = 1590us without voltage and server
+  //Serial.println(micros() - stopTime); // = 1590us without voltage and server
 
 /////////////////////////////VOLTAGE/////////////////////////////////////
 //  voltage = (float)analogRead(sensor_vp) / 4096 * 14.8 * 28695 / 28700;
 //  Serial.print(voltage,1); Serial.println("v");
 //  if (voltage < 12.8) {
-//    digitalWrite(statusLED, HIGH); //Using inactive status led as warning signal
+//    digitalWrite(statusLED, HIGH); //Using inactive status led or other as warning signal
 //  }
 
 /////////////////////////////SERVER/////////////////////////////////////
