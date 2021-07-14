@@ -46,8 +46,8 @@ const int stepPinR = 4;
 const int dirPinL = 15; //If LOW, the the esp will not show the log anymore at bootup (Serial.print)
 const int stepPinL = 18;
 const int enablePin = 19;
-int R_motor_Dir = HIGH; //motor direction clockwise
-int L_motor_Dir = LOW;  //motor direction counterclockwise
+int R_motor_Dir = LOW;  //motor direction counterclockwise //Pin_2 must be LOW at start for boot to work!
+int L_motor_Dir = HIGH; //motor direction clockwise
 // Define max-Function
 float minimal(float a, float b);
 
@@ -172,23 +172,26 @@ void loop() {
     temp = minimal(50.0, 500 + (10.6667*error));
   } else if(error > 0) {
     temp = minimal(50.0, 500 - (10.6667*error));
+  } else {
+    temp = 250000;
   }
 
   portENTER_CRITICAL(&timerMux);
   interval = (long)temp;
   portEXIT_CRITICAL(&timerMux);
 
-  Serial.print(interval); Serial.print(" , ");
+  Serial.print(interval); Serial.print("\n");
 
 /////////////////////////////MOTOR/////////////////////////////////////
 
   // if(-2 <error <2){ disable motor using enable_pin to reduce unnecessary jerking movements while standing }
   // if(error < -45 || error > 45){ disable motor using enable_pin because the robot is falling either way }
-  if ((1 > abs(error)) || (abs(error) > 40)) {
-    digitalWrite(enablePin, HIGH); // driver is inactive
+  //if ((1 > abs(error)) || (abs(error) > 40)) { //Problem, because enabling driver can also produce jerking movements, therefore setting temp = 250000 is better
+  if (abs(error)) < 30)) {
+    digitalWrite(enablePin, LOW);  // driver is active
     digitalWrite(statusLED, LOW);
   } else {
-    digitalWrite(enablePin, LOW);  // driver is active
+    digitalWrite(enablePin, HIGH); // driver is inactive
     digitalWrite(statusLED, HIGH);
   }
   
