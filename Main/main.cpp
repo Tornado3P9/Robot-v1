@@ -25,18 +25,7 @@ float deviation;
 float imu();
 
 /************* PID kram *************/
-float PID, pwmLeft, pwmRight, error, previous_error;
-float pid_p=0;
-float pid_i=0;
-float pid_d=0;
-/////////////////PID CONSTANTS/////////////////
-double kp=3.55;//3.55
-double ki=0.005;//0.003
-double kd=2.05;//2.05
-///////////////////////////////////////////////
-float desired_angle = 0; //This is the angle in which we want the
-//balance to stay steady: 0 degrees for standing, maybe 20 degrees for driving
-float temp;
+float error, previous_error, desired_angle, temp;
 
 /************* Motor kram *************/
 // stepsPerRevolution for Full Step = 200, 1.8 degrees for each Step
@@ -48,8 +37,6 @@ const int stepPinL = 18;
 const int enablePin = 19;
 int R_motor_Dir = LOW;  //motor direction counterclockwise //Pin_2 must be LOW at start for boot to work!
 int L_motor_Dir = HIGH; //motor direction clockwise
-// Define max-Function
-float minimal(float a, float b);
 
 /************* Motor ISR kram *************/
 /* create a hardware timer */
@@ -115,6 +102,8 @@ void setup() {
   
   timeH = 0;
   temp = 1000; //beginne halt nur nicht bei 0 oder generell zu schnell fuer den Motor
+  desired_angle = 0; //This is the angle in which we want the balance to stay steady: 0 degrees for standing, maybe 20 degrees for driving
+  previous_error = 0;
 
   //calibrate deviation -> funny enough no Mean-Calculation necessary
   for(i=0; i<500; i++){
@@ -151,52 +140,32 @@ void loop() {
   /*In Arduino IDE open Serial Monitor or Serial Plotter*/
 
 /////////////////////////////P I D/////////////////////////////////////
-/*
-  error = imu() + deviation - desired_angle;
 
-  pid_p = kp*error;
-
-  if(-3 <error <3){
-    pid_i = pid_i+(ki*error);  
-  }
-
-  pid_d = kd*((error - previous_error)/elapsedTime);
-
-  PID = pid_p + pid_i + pid_d;
-
-  //Remember to store the previous error.
-  previous_error = error;
-*/
-
-  if (error < 0) {
-    temp = minimal(50.0, 500 + (10.6667*error));
-  } else if(error > 0) {
-    temp = minimal(50.0, 500 - (10.6667*error));
+  if (error < -2) {
+    temp = 1400 + (105.86*error) + (2.1172*(error*error)); //quadratic fit{{2,1200},{25,80},{48,1200}}
+  } else if(error > 2) {
+    temp = 1400 - (105.86*error) + (2.1172*(error*error));
   } else {
-    temp = 250000;
+    temp = 125000;
   }
 
-  portENTER_CRITICAL(&timerMux);
-  interval = (long)temp;
-  portEXIT_CRITICAL(&timerMux);
-
-  Serial.print(interval); Serial.print("\n");
+  Serial.println(temp); //print motor interval
 
 /////////////////////////////MOTOR/////////////////////////////////////
 
   // if(-2 <error <2){ disable motor using enable_pin to reduce unnecessary jerking movements while standing }
   // if(error < -45 || error > 45){ disable motor using enable_pin because the robot is falling either way }
-  //if ((1 > abs(error)) || (abs(error) > 40)) { //Problem, because enabling driver can also produce jerking movements, therefore setting temp = 250000 is better
-  if (abs(error)) < 30)) {
-    digitalWrite(enablePin, LOW);  // driver is active
-    digitalWrite(statusLED, LOW);
-  } else {
+  //if ((1 > abs(error)) || (abs(error) > 30)) { //Problem, because enabling driver can also produce jerking movements, therefore setting temp = 250000 is better
+  if (abs(error) > 30) {
     digitalWrite(enablePin, HIGH); // driver is inactive
     digitalWrite(statusLED, HIGH);
+  } else {
+    digitalWrite(enablePin, LOW);  // driver is active
+    digitalWrite(statusLED, LOW);
   }
-  
-  // Set motor direction
-  if(error < 0){
+
+  // Set motor direction and step interval
+  if(error > 0){
     R_motor_Dir = LOW;  //motor direction counterclockwise
     L_motor_Dir = HIGH; //motor direction clockwise
   } else {
@@ -205,8 +174,10 @@ void loop() {
   }
   digitalWrite(dirPinR, R_motor_Dir);
   digitalWrite(dirPinL, L_motor_Dir);
-
-  //Serial.println(micros() - stopTime); // = 1590us without voltage and server
+  
+  portENTER_CRITICAL(&timerMux);
+  interval = (long)temp;
+  portEXIT_CRITICAL(&timerMux);
 
 /////////////////////////////VOLTAGE/////////////////////////////////////
 //  voltage = (float)analogRead(sensor_vp) / 4096 * 14.8 * 28695 / 28700;
@@ -217,6 +188,8 @@ void loop() {
 
 /////////////////////////////SERVER/////////////////////////////////////
   server();
+
+//Serial.println(micros() - stopTime); //stopTime end = ...us
 }
 
 
@@ -260,14 +233,6 @@ float imu(){
 
    /*Now we have our angles in degree and values from -100º to 100º aprox*/
    return Total_angle[0];
-}
-
-float minimal(float a, float b){
-  if(a>=b){
-    return a;
-  } else {
-    return b;
-  }
 }
 
 void server(){
