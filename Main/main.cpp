@@ -34,7 +34,7 @@ const int dirPinR = 2; //(SD_DATA0 External pulldown) If HIGH during boot, then 
 const int stepPinR = 4;
 const int dirPinL = 15; //If LOW, the the esp will not show the log anymore at bootup (Serial.print)
 const int stepPinL = 18;
-const int enablePin = 19;
+const int enablePin = 19; //Not necessary when only using enable-byte
 int R_motor_Dir = LOW;  //motor direction counterclockwise //Pin_2 must be LOW at start for boot to work!
 int L_motor_Dir = HIGH; //motor direction clockwise
 
@@ -43,6 +43,7 @@ int L_motor_Dir = HIGH; //motor direction clockwise
 hw_timer_t * timer = NULL;
 portMUX_TYPE timerMux = portMUX_INITIALIZER_UNLOCKED;
 
+volatile byte enable = LOW;   //enable-disable driver action
 volatile byte state = LOW;    //Steppermotoren bekommen wechselnd HIGH und LOW voltage
 volatile int interval = 900;  //interval in microseconds, fast=20, slow=1000
 volatile unsigned long previousMicros = 0;
@@ -62,11 +63,12 @@ void IRAM_ATTR onTimer(){
   if (currentMicros - previousMicros > interval) {
     previousMicros = currentMicros;
 
-    state = !state;
-    //digitalWrite(statusLED, state);
+    if (enable == HIGH) {
+      state = !state;
     
-    digitalWrite(stepPinR, state);
-    digitalWrite(stepPinL, state);
+      digitalWrite(stepPinR, state);
+      digitalWrite(stepPinL, state);
+    }
   }
 }
 
@@ -90,10 +92,10 @@ void setup() {
   pinMode(dirPinR, OUTPUT);
   pinMode(stepPinL, OUTPUT);
   pinMode(dirPinL, OUTPUT);
-  pinMode(enablePin, OUTPUT);
+  pinMode(enablePin, OUTPUT); // HIGH = inactive, LOW = active
 
   // Disable Stepper Driver at start
-  digitalWrite(enablePin, HIGH);
+  digitalWrite(enablePin, HIGH); //Not necessary when only using enable-byte
 
   // Declare Voltage Measurement pin as Input, may not be necessary if microprocessor
   // has it set to 0 on startup and therefore would make it an Input automatically or sth.
@@ -105,9 +107,11 @@ void setup() {
   desired_angle = 0; //This is the angle in which we want the balance to stay steady: 0 degrees for standing, maybe 20 degrees for driving
   previous_error = 0;
 
+  delay(2000); //Gibt mir genug Zeit um den Roboter gerade auszurichten
+
   //calibrate deviation -> funny enough no Mean-Calculation necessary
   for(i=0; i<500; i++){
-    //if(i % 15 == 0)digitalWrite(statusLED, !digitalRead(statusLED));
+    if(i % 15 == 0)digitalWrite(statusLED, !digitalRead(statusLED));
     imu(); //let it reach optimal operation temperature?
   }
   deviation = imu() * (-1);
@@ -126,6 +130,8 @@ void setup() {
 
   // statusLED = OFF
   digitalWrite(statusLED, LOW);
+  // activate drivers
+  digitalWrite(enablePin, LOW); //Not necessary when only using enable-byte
 }
 
 void loop() {
@@ -146,7 +152,7 @@ void loop() {
   } else if(error > 2) {
     temp = 1400 - (105.86*error) + (2.1172*(error*error));
   } else {
-    temp = 125000;
+    temp = 250000;
   }
 
   Serial.println(temp); //print motor interval
@@ -157,10 +163,14 @@ void loop() {
   // if(error < -45 || error > 45){ disable motor using enable_pin because the robot is falling either way }
   //if ((1 > abs(error)) || (abs(error) > 30)) { //Problem, because enabling driver can also produce jerking movements, therefore setting temp = 250000 is better
   if (abs(error) > 30) {
-    digitalWrite(enablePin, HIGH); // driver is inactive
+    portENTER_CRITICAL(&timerMux);
+    enable = LOW;                   // driver is inactive
+    portEXIT_CRITICAL(&timerMux);
     digitalWrite(statusLED, HIGH);
   } else {
-    digitalWrite(enablePin, LOW);  // driver is active
+    portENTER_CRITICAL(&timerMux);
+    enable = HIGH;                  // driver is active
+    portEXIT_CRITICAL(&timerMux);
     digitalWrite(statusLED, LOW);
   }
 
