@@ -43,9 +43,10 @@ int L_motor_Dir = HIGH; //motor direction clockwise
 hw_timer_t * timer = NULL;
 portMUX_TYPE timerMux = portMUX_INITIALIZER_UNLOCKED;
 
-volatile byte enable = LOW;   //enable-disable driver action
-volatile byte state = LOW;    //Steppermotoren bekommen wechselnd HIGH und LOW voltage
-volatile int interval = 900;  //interval in microseconds, fast=20, slow=1000
+boolean enableTemp = false;          //temporary variable to keep the code clean
+volatile boolean enable = false;     //enable-disable driver action
+volatile byte state = LOW;           //Steppermotoren bekommen wechselnd HIGH und LOW voltage
+volatile int interval = 900;         //interval in microseconds, fast=20, slow=1000
 volatile unsigned long previousMicros = 0;
 volatile unsigned long currentMicros = 0;
 
@@ -63,9 +64,8 @@ void IRAM_ATTR onTimer(){
   if (currentMicros - previousMicros > interval) {
     previousMicros = currentMicros;
 
-    if (enable == HIGH) {
+    if (enable) {
       state = !state;
-    
       digitalWrite(stepPinR, state);
       digitalWrite(stepPinL, state);
     }
@@ -147,12 +147,10 @@ void loop() {
 
 /////////////////////////////P I D/////////////////////////////////////
 
-  if (error < -2) {
+  if (error < 0) {
     temp = 1400 + (105.86*error) + (2.1172*(error*error)); //quadratic fit{{2,1200},{25,80},{48,1200}}
-  } else if(error > 2) {
-    temp = 1400 - (105.86*error) + (2.1172*(error*error));
   } else {
-    temp = 250000;
+    temp = 1400 - (105.86*error) + (2.1172*(error*error));
   }
 
   Serial.println(temp); //print motor interval
@@ -160,17 +158,12 @@ void loop() {
 /////////////////////////////MOTOR/////////////////////////////////////
 
   // if(-2 <error <2){ disable motor using enable_pin to reduce unnecessary jerking movements while standing }
-  // if(error < -45 || error > 45){ disable motor using enable_pin because the robot is falling either way }
-  //if ((1 > abs(error)) || (abs(error) > 30)) { //Problem, because enabling driver can also produce jerking movements, therefore setting temp = 250000 is better
-  if (abs(error) > 30) {
-    portENTER_CRITICAL(&timerMux);
-    enable = LOW;                   // driver is inactive
-    portEXIT_CRITICAL(&timerMux);
+  // if(error < -30 || error > 30){ disable motor using enable_pin because the robot is falling either way }
+  if ((2 > abs(error)) || (abs(error) > 30)) {
+    enableTemp = false;                // driver is inactive
     digitalWrite(statusLED, HIGH);
   } else {
-    portENTER_CRITICAL(&timerMux);
-    enable = HIGH;                  // driver is active
-    portEXIT_CRITICAL(&timerMux);
+    enableTemp = true;                // driver is active
     digitalWrite(statusLED, LOW);
   }
 
@@ -186,6 +179,7 @@ void loop() {
   digitalWrite(dirPinL, L_motor_Dir);
   
   portENTER_CRITICAL(&timerMux);
+  enable = enableTemp;
   interval = (long)temp;
   portEXIT_CRITICAL(&timerMux);
 
