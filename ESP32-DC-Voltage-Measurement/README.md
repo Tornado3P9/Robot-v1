@@ -7,4 +7,4 @@ https://youtu.be/d-j0onzzuNQ
 https://youtu.be/IT19dg73nKU  
 https://youtu.be/6Maq5IyHSuc  
 http://www.ohmslawcalculator.com/voltage-divider-calculator  
-
+https://techoverflow.net/2021/07/26/how-to-connect-esp32-wroom-32-sensor_vp-sensor_vn-pins/

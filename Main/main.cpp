@@ -43,10 +43,10 @@ int L_motor_Dir = HIGH; //motor direction clockwise
 hw_timer_t * timer = NULL;
 portMUX_TYPE timerMux = portMUX_INITIALIZER_UNLOCKED;
 
-boolean enableTemp = false;          //temporary variable to keep the code clean
-volatile boolean enable = false;     //enable-disable driver action
-volatile byte state = LOW;           //Steppermotoren bekommen wechselnd HIGH und LOW voltage
-volatile int interval = 900;         //interval in microseconds, fast=20, slow=1000
+bool enableTemp = false;          //temporary variable to keep the code clean
+volatile bool enable = false;     //enable-disable driver action
+volatile byte state = LOW;        //Steppermotoren bekommen wechselnd HIGH und LOW voltage
+volatile int interval = 900;      //interval in microseconds, fast=20, slow=1000
 volatile unsigned long previousMicros = 0;
 volatile unsigned long currentMicros = 0;
 
@@ -92,7 +92,7 @@ void setup() {
   pinMode(dirPinR, OUTPUT);
   pinMode(stepPinL, OUTPUT);
   pinMode(dirPinL, OUTPUT);
-  pinMode(enablePin, OUTPUT); // HIGH = inactive, LOW = active
+  pinMode(enablePin, OUTPUT); // HIGH = inactive, LOW = active //Not necessary when only using enable-byte
 
   // Disable Stepper Driver at start
   digitalWrite(enablePin, HIGH); //Not necessary when only using enable-byte
@@ -111,7 +111,7 @@ void setup() {
 
   //calibrate deviation -> funny enough no Mean-Calculation necessary
   for(i=0; i<500; i++){
-    if(i % 15 == 0)digitalWrite(statusLED, !digitalRead(statusLED));
+    if(i % 30 == 0)digitalWrite(statusLED, !digitalRead(statusLED));
     imu(); //let it reach optimal operation temperature?
   }
   deviation = imu() * (-1);
@@ -153,7 +153,7 @@ void loop() {
     temp = 1400 - (105.86*error) + (2.1172*(error*error));
   }
 
-  Serial.println(temp); //print motor interval
+  Serial.print(temp); Serial.print(" , "); //print motor interval
 
 /////////////////////////////MOTOR/////////////////////////////////////
 
@@ -184,11 +184,11 @@ void loop() {
   portEXIT_CRITICAL(&timerMux);
 
 /////////////////////////////VOLTAGE/////////////////////////////////////
-//  voltage = (float)analogRead(sensor_vp) / 4096 * 14.8 * 28695 / 28700;
-//  Serial.print(voltage,1); Serial.println("v");
-//  if (voltage < 12.8) {
-//    digitalWrite(statusLED, HIGH); //Using inactive status led or other as warning signal
-//  }
+  voltage = (float)analogRead(sensor_vp) / 4096 * 14.8 * 28695 / 28700;
+  Serial.print(voltage,1); Serial.println("v");
+  if (voltage < 13) {
+    digitalWrite(statusLED, HIGH); //Using inactive status led or other as warning signal
+  }
 
 /////////////////////////////SERVER/////////////////////////////////////
   server();
